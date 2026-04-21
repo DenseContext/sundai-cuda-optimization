@@ -109,26 +109,3 @@ git commit -m "Optimize kernel: score XXX TOPs (was YYY)"
 ## External Libraries Allowed
 
 cuBLAS, CUTLASS, Thrust, CUB — all fair game.
-
-## Optimization Roadmap
-
-### Implemented
-- [x] MMA tensor core instructions (m16n8k64)
-- [x] cp.async double-buffered shared memory
-- [x] BLOCK_K=128 (2 groups per tile, halved sync count)
-- [x] BLOCK_N=64 for higher occupancy (3-4 blocks/SM)
-- [x] Non-predicated cp.async (no branch overhead)
-- [x] cp.async.cg (L2-only caching, no L1 pollution)
-- [x] Precomputed scale products
-- [x] Vectorized __half2 epilogue stores
-- [x] torch::empty output
-- [x] __launch_bounds__(256, 3) for register control
-
-### Next Optimizations
-1. **Warp specialization** — producer/consumer warp split for true compute/memory overlap
-2. **3-stage pipeline** — deeper prefetch to hide memory latency
-3. **Register-level fragment double buffering** — pre-load next fragments during MMA
-4. **Swizzled smem layout** — eliminate 2-way bank conflicts on fragment loads
-5. **SplitK for large-K shapes** — ff_down (K=12288) benefits from K-parallel decomposition
-6. **CTA rasterization** — Hilbert/swizzle block scheduling for L2 locality
-7. **CUTLASS integration** — use CUTLASS 3.x int4 templates as backend
