@@ -4,3 +4,7 @@
 - We achieved a score of
   -  Best score: 389 (top of variance range, cold GPU)
   -  Typical score: 385
+
+![Progress](docs/imgs/progress.png)
+
+![Benchmark at ~385 score](docs/imgs/385_benchmark.png)
