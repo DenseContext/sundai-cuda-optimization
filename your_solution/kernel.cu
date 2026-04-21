@@ -276,7 +276,7 @@ __global__ void gemm_direct_kernel_4w(
     const int m_base = bm * BM4 + warp * WM4;
     const int row = lane / 4;
 
-    __shared__ half ssb[2][BN];
+    __shared__ half ssb[BN];
 
     half2 acc[AT4][NT][4];
     #pragma unroll
@@ -296,7 +296,7 @@ __global__ void gemm_direct_kernel_4w(
     const int b_base = (bn * nkt) * NT * WS + lane;
     const int b_stride = NT * WS;
 
-    if (tid < BN) ssb[0][tid] = scales_B[(bn * BN + tid) * num_groups_B];
+    if (tid < BN) ssb[tid] = scales_B[(bn * BN + tid) * num_groups_B];
 
     uint4 af0 = A[a_base0];
     uint4 af1 = A[a_base1];
@@ -352,8 +352,8 @@ __global__ void gemm_direct_kernel_4w(
         const int c0 = bn * BN + nt * 16 + (lane % 4) * 2;
         const int c2 = c0 + 8;
 
-        const half2 sb01 = *reinterpret_cast<const half2*>(&ssb[0][nt * 16 + (lane % 4) * 2]);
-        const half2 sb23 = *reinterpret_cast<const half2*>(&ssb[0][nt * 16 + (lane % 4) * 2 + 8]);
+        const half2 sb01 = *reinterpret_cast<const half2*>(&ssb[nt * 16 + (lane % 4) * 2]);
+        const half2 sb23 = *reinterpret_cast<const half2*>(&ssb[nt * 16 + (lane % 4) * 2 + 8]);
 
         *reinterpret_cast<half2*>(&C[m0 * N + c0]) = __hmul2(acc[0][nt][0], sb01);
         *reinterpret_cast<half2*>(&C[m0 * N + c2]) = __hmul2(acc[0][nt][2], sb23);
@@ -400,8 +400,8 @@ __global__ void gemm_direct_kernel(
     const int m_base = bm * BM + warp * WM;
     const int row = lane / 4;
 
-    // Only B scales in shared memory (double-buffered, ~512B)
-    __shared__ half ssb[2][BN];
+    // B scales in shared memory (single buffer, ~256B)
+    __shared__ half ssb[BN];
 
     // half2 accumulators
     half2 acc[AT][NT][4];
@@ -424,7 +424,7 @@ __global__ void gemm_direct_kernel(
     const int b_stride = NT * WS;
 
     // Load B-scales (single group, constant for entire GEMM)
-    if (tid < BN) ssb[0][tid] = scales_B[(bn * BN + tid) * num_groups_B];
+    if (tid < BN) ssb[tid] = scales_B[(bn * BN + tid) * num_groups_B];
 
     // Prefetch first K-tile's A-fragments
     uint4 af0 = A[a_base0];
@@ -484,8 +484,8 @@ __global__ void gemm_direct_kernel(
         const int c2 = c0 + 8;
 
         // B-scale for this thread's output columns (constant since 1 B-group)
-        const half2 sb01 = *reinterpret_cast<const half2*>(&ssb[0][nt * 16 + (lane % 4) * 2]);
-        const half2 sb23 = *reinterpret_cast<const half2*>(&ssb[0][nt * 16 + (lane % 4) * 2 + 8]);
+        const half2 sb01 = *reinterpret_cast<const half2*>(&ssb[nt * 16 + (lane % 4) * 2]);
+        const half2 sb23 = *reinterpret_cast<const half2*>(&ssb[nt * 16 + (lane % 4) * 2 + 8]);
 
         *reinterpret_cast<half2*>(&C[m0 * N + c0]) = __hmul2(acc[0][nt][0], sb01);
         *reinterpret_cast<half2*>(&C[m0 * N + c2]) = __hmul2(acc[0][nt][2], sb23);
